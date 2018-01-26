@@ -23,7 +23,7 @@ typedef std::chrono::duration<double> DoubleDuration;
 const size_t MAX_PARTICLES = 20;
 std::shared_ptr<Window> window;
 Camera camera(glm::vec3(0.0f, 50.0f, 50.0f), glm::quat());
-ParticleEmitter particleEmitter(MAX_PARTICLES, glm::vec3(-25.0f, 25.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -3.0f, 0.0f), glm::radians(5.0f), 1.0f);
+ParticleEmitter particleEmitter(MAX_PARTICLES, glm::vec3(-25.0f, 25.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -3.0f, 0.0f), glm::radians(15.0f), 1.0f);
 GLuint particleVAO;
 GLuint particleVBO;
 GLuint floorVAO;
@@ -246,7 +246,7 @@ void render()
 	floorShader->bind();
 	floorShader->setUniform(uModelViewProjectionFloor, window->getProjectionMatrix() * camera.getViewMatrix() * glm::scale(glm::vec3(50.0f)));
 
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	
 	// render particles
 	std::vector<Particle *> &particles = particleEmitter.getParticles();
@@ -289,7 +289,18 @@ void render()
 			particleQuadsShader->setUniform(uProjectionParticleQuads, window->getProjectionMatrix());
 			particleQuadsShader->setUniform(uNumParticles, (int)particles.size());
 
+			glm::mat4 viewMatrix = camera.getViewMatrix();
+
 			std::vector<Particle *> &particles = particleEmitter.getParticles();
+			// sort particles by view space depth
+			std::sort(particles.begin(), particles.end(), [&viewMatrix](const Particle *a, const Particle *b)
+			{
+				glm::vec3 aPos = glm::vec3(viewMatrix * glm::vec4(a->position, 1.0));
+				glm::vec3 bPos = glm::vec3(viewMatrix * glm::vec4(b->position, 1.0));
+				return aPos.z < bPos.z;
+			});
+
+			
 			for (size_t i = 0; i < particles.size(); ++i)
 			{
 				particleQuadsShader->setUniform(uParticles[i], glm::vec3(camera.getViewMatrix() * glm::vec4(particles[i]->position, 1.0)));

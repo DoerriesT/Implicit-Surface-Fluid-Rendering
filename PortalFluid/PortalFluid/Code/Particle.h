@@ -33,7 +33,7 @@ private:
 	std::uniform_real_distribution<> phiDistribution;
 	std::uniform_real_distribution<> thetaDistribution;
 	std::uniform_real_distribution<> speedDistribution;
-	std::uniform_real_distribution<> particleEmittanceDistribution = std::uniform_real_distribution<>(0.1f, 1.0f);
+	std::uniform_real_distribution<> particleEmittanceDistribution = std::uniform_real_distribution<>(0.1f, 0.2f);
 	std::vector<Particle *> particles;
 	size_t maxParticles;
 	glm::vec3 position;

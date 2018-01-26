@@ -14,7 +14,8 @@ void ParticleEmitter::update(const double &_currentTime, const double &_deltaTim
 		
 		if (particle->position.y < 0.0f)
 		{
-			particlesToRemove.push_back(particle);
+			particle->speed = glm::vec3(0.0);
+			//particlesToRemove.push_back(particle);
 		}
 	}
 
