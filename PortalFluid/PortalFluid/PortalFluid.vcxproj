@@ -122,6 +122,7 @@
     <ClCompile Include="Code\main.cpp" />
     <ClCompile Include="Code\Particle.cpp" />
     <ClCompile Include="Code\ShaderProgram.cpp" />
+    <ClCompile Include="Code\Texture.cpp" />
     <ClCompile Include="Code\Utility.cpp" />
     <ClCompile Include="Code\Window.cpp" />
   </ItemGroup>
@@ -129,6 +130,7 @@
     <ClInclude Include="Code\Camera.h" />
     <ClInclude Include="Code\Particle.h" />
     <ClInclude Include="Code\ShaderProgram.h" />
+    <ClInclude Include="Code\Texture.h" />
     <ClInclude Include="Code\Utility.h" />
     <ClInclude Include="Code\Window.h" />
   </ItemGroup>
@@ -138,6 +140,8 @@
     <None Include="Resources\Shaders\particle.frag" />
     <None Include="Resources\Shaders\particle.geom" />
     <None Include="Resources\Shaders\particle.vert" />
+    <None Include="Resources\Shaders\skybox.frag" />
+    <None Include="Resources\Shaders\skybox.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

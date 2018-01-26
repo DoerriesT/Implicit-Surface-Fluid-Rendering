@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include <glm\gtx\string_cast.hpp>
 #include <glm\gtx\transform.hpp>
+#include "Texture.h"
 
 void glErrorCheck(const std::string &_message);
 void gameLoop();
@@ -32,61 +33,87 @@ GLuint floorEBO;
 std::shared_ptr<ShaderProgram> particlePointsShader;
 std::shared_ptr<ShaderProgram> particleQuadsShader;
 std::shared_ptr<ShaderProgram> floorShader;
+std::shared_ptr<ShaderProgram> skyboxShader;
+std::shared_ptr<Texture> environmentMap;
 
 // point particle shader uniforms
-GLint uViewProjectionParticlePoints;
-GLint uViewPortSizeParticlePoints;
-GLint uPositionParticlePoints;
-GLint uViewParticlePoints;
-GLint uProjectionParticlePoints;
-GLint uModeParticlePoints;
+GLint uViewPortSizePoints;
+GLint uPositionPoints;
+GLint uViewPoints;
+GLint uProjectionPoints;
+GLint uModePoints;
 
 // quad particle shader uniforms
-GLint uViewProjectionParticleQuads;
-GLint uViewPortSizeParticleQuads;
-GLint uPositionParticleQuads;
-GLint uViewParticleQuads;
-GLint uProjectionParticleQuads;
-GLint uModeParticleQuads;
-GLint uParticles[20];
-GLint uNumParticles;
+GLint uViewPortSizeQuads;
+GLint uPositionQuads;
+GLint uViewQuads;
+GLint uProjectionQuads;
+GLint uModeQuads;
+GLint uParticlesQuads[20];
+GLint uNumParticlesQuads;
+GLint uEnvironmentMapQuads;
+GLint uInverseViewQuads;
 
 // floor shader uniform
 GLint uModelViewProjectionFloor;
 
+// skybox shader uniforms
+GLint uInverseModelViewProjectionSkybox;
+GLint uEnvironmentMapSkybox;
+
 // mode
-int mode = 1;
+int mode = 3;
 
 
 int main()
 {
 	camera.rotate(glm::vec3(glm::radians(45.0f), 0.0f, 0.0f));
-	window = Window::createWindow("Portal Fluid", 800, 600, true, 0);
+	window = Window::createWindow("Portal Fluid", 1280, 720, true, 0);
 	window->init();
 	initializeOpenGL();
 
 	particlePointsShader = ShaderProgram::createShaderProgram("Resources/Shaders/particle.vert", "Resources/Shaders/particle.frag");
 	particleQuadsShader = ShaderProgram::createShaderProgram("Resources/Shaders/particle.vert", "Resources/Shaders/particle.frag", "Resources/Shaders/particle.geom");
 	floorShader = ShaderProgram::createShaderProgram("Resources/Shaders/floor.vert", "Resources/Shaders/floor.frag");
+	skyboxShader = ShaderProgram::createShaderProgram("Resources/Shaders/skybox.vert", "Resources/Shaders/skybox.frag");
 
-	uViewPortSizeParticlePoints = particlePointsShader->createUniform("uViewPortSize");
-	uPositionParticlePoints = particlePointsShader->createUniform("uPosition");
-	uViewParticlePoints = particlePointsShader->createUniform("uView");
-	uProjectionParticlePoints = particlePointsShader->createUniform("uProjection");
-	uModeParticlePoints = particlePointsShader->createUniform("uMode");
+	// points
+	uViewPortSizePoints = particlePointsShader->createUniform("uViewPortSize");
+	uPositionPoints = particlePointsShader->createUniform("uPosition");
+	uViewPoints = particlePointsShader->createUniform("uView");
+	uProjectionPoints = particlePointsShader->createUniform("uProjection");
+	uModePoints = particlePointsShader->createUniform("uMode");
 
-	uViewPortSizeParticleQuads = particleQuadsShader->createUniform("uViewPortSize");
-	uPositionParticleQuads = particleQuadsShader->createUniform("uPosition");
-	uViewParticleQuads = particleQuadsShader->createUniform("uView");
-	uProjectionParticleQuads = particleQuadsShader->createUniform("uProjection");
-	uModeParticleQuads = particleQuadsShader->createUniform("uMode");
+	// quads
+	uViewPortSizeQuads = particleQuadsShader->createUniform("uViewPortSize");
+	uPositionQuads = particleQuadsShader->createUniform("uPosition");
+	uViewQuads = particleQuadsShader->createUniform("uView");
+	uProjectionQuads = particleQuadsShader->createUniform("uProjection");
+	uModeQuads = particleQuadsShader->createUniform("uMode");
 	for (size_t i = 0; i < 20; ++i)
 	{
-		uParticles[i] = particleQuadsShader->createUniform("uParticles[" + std::to_string(i)+ "]");
+		uParticlesQuads[i] = particleQuadsShader->createUniform("uParticles[" + std::to_string(i)+ "]");
 	}
-	uNumParticles = particleQuadsShader->createUniform("uNumParticles");
+	uNumParticlesQuads = particleQuadsShader->createUniform("uNumParticles");
+	uEnvironmentMapQuads = particleQuadsShader->createUniform("uEnvironmentMap");
+	uInverseViewQuads = particleQuadsShader->createUniform("uInverseView");
 
+	// floor
 	uModelViewProjectionFloor = floorShader->createUniform("uModelViewProjection");
+
+	// skybox
+	uInverseModelViewProjectionSkybox = skyboxShader->createUniform("uInverseModelViewProjection");
+	uEnvironmentMapSkybox = skyboxShader->createUniform("uEnvironmentMap");
+
+	skyboxShader->bind();
+	skyboxShader->setUniform(uEnvironmentMapSkybox, 0);
+	particleQuadsShader->bind();
+	particleQuadsShader->setUniform(uEnvironmentMapQuads, 0);
+
+	environmentMap = Texture::createTexture("Resources/Textures/environment.dds");
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(environmentMap->getType(), environmentMap->getId());
 
 	// particle VAO/VBO
 	{
@@ -189,22 +216,22 @@ void input(const double &_deltaTime)
 	bool pressed = false;
 	if (window->isKeyPressed(GLFW_KEY_W))
 	{
-		cameraTranslation.z = -10.0f * _deltaTime;
+		cameraTranslation.z = -15.0f * (float)_deltaTime;
 		pressed = true;
 	}
 	if (window->isKeyPressed(GLFW_KEY_S))
 	{
-		cameraTranslation.z = 10.0f * _deltaTime;
+		cameraTranslation.z = 15.0f * (float)_deltaTime;
 		pressed = true;
 	}
 	if (window->isKeyPressed(GLFW_KEY_A))
 	{
-		cameraTranslation.x = -10.0f * _deltaTime;
+		cameraTranslation.x = -15.0f * (float)_deltaTime;
 		pressed = true;
 	}
 	if (window->isKeyPressed(GLFW_KEY_D))
 	{
-		cameraTranslation.x = 10.0f * _deltaTime;
+		cameraTranslation.x = 15.0f * (float)_deltaTime;
 		pressed = true;
 	}
 	if (pressed)
@@ -247,6 +274,10 @@ void render()
 	floorShader->setUniform(uModelViewProjectionFloor, window->getProjectionMatrix() * camera.getViewMatrix() * glm::scale(glm::vec3(50.0f)));
 
 	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	skyboxShader->bind();
+	skyboxShader->setUniform(uInverseModelViewProjectionSkybox, glm::inverse(window->getProjectionMatrix() * glm::mat4(glm::mat3(camera.getViewMatrix()))));
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 	
 	// render particles
 	std::vector<Particle *> &particles = particleEmitter.getParticles();
@@ -268,13 +299,13 @@ void render()
 		if (mode == 0)
 		{
 			particlePointsShader->bind();
-			particlePointsShader->setUniform(uViewPortSizeParticlePoints, glm::vec2(window->getWidth(), window->getHeight()));
-			particlePointsShader->setUniform(uModeParticlePoints, 0);
-			particlePointsShader->setUniform(uViewParticlePoints, camera.getViewMatrix());
-			particlePointsShader->setUniform(uProjectionParticlePoints, window->getProjectionMatrix());
+			particlePointsShader->setUniform(uViewPortSizePoints, glm::vec2(window->getWidth(), window->getHeight()));
+			particlePointsShader->setUniform(uModePoints, 0);
+			particlePointsShader->setUniform(uViewPoints, camera.getViewMatrix());
+			particlePointsShader->setUniform(uProjectionPoints, window->getProjectionMatrix());
 			for (Particle *particle : particleEmitter.getParticles())
 			{
-				particlePointsShader->setUniform(uPositionParticlePoints, glm::vec4(particle->position, 1.0));
+				particlePointsShader->setUniform(uPositionPoints, glm::vec4(particle->position, 1.0));
 
 				glDrawArrays(GL_POINTS, 0, 1);
 				glErrorCheck("glDrawArrays");
@@ -283,13 +314,15 @@ void render()
 		else
 		{
 			particleQuadsShader->bind();
-			particleQuadsShader->setUniform(uViewPortSizeParticleQuads, glm::vec2(window->getWidth(), window->getHeight()));
-			particleQuadsShader->setUniform(uModeParticleQuads, mode);
-			particleQuadsShader->setUniform(uViewParticleQuads, camera.getViewMatrix());
-			particleQuadsShader->setUniform(uProjectionParticleQuads, window->getProjectionMatrix());
-			particleQuadsShader->setUniform(uNumParticles, (int)particles.size());
+			particleQuadsShader->setUniform(uViewPortSizeQuads, glm::vec2(window->getWidth(), window->getHeight()));
+			particleQuadsShader->setUniform(uModeQuads, mode);
+			particleQuadsShader->setUniform(uViewQuads, camera.getViewMatrix());
+			particleQuadsShader->setUniform(uProjectionQuads, window->getProjectionMatrix());
+			particleQuadsShader->setUniform(uNumParticlesQuads, (int)particles.size());
 
 			glm::mat4 viewMatrix = camera.getViewMatrix();
+
+			particleQuadsShader->setUniform(uInverseViewQuads, glm::inverse(viewMatrix));
 
 			std::vector<Particle *> &particles = particleEmitter.getParticles();
 			// sort particles by view space depth
@@ -303,14 +336,14 @@ void render()
 			
 			for (size_t i = 0; i < particles.size(); ++i)
 			{
-				particleQuadsShader->setUniform(uParticles[i], glm::vec3(camera.getViewMatrix() * glm::vec4(particles[i]->position, 1.0)));
+				particleQuadsShader->setUniform(uParticlesQuads[i], glm::vec3(camera.getViewMatrix() * glm::vec4(particles[i]->position, 1.0)));
 				glErrorCheck("setUniform");
 			}
 			
 
 			for (Particle *particle : particleEmitter.getParticles())
 			{
-				particleQuadsShader->setUniform(uPositionParticleQuads, glm::vec4(particle->position, 1.0));
+				particleQuadsShader->setUniform(uPositionQuads, glm::vec4(particle->position, 1.0));
 
 				glDrawArrays(GL_POINTS, 0, 1);
 				glErrorCheck("glDrawArrays");
@@ -320,6 +353,7 @@ void render()
 		//glDrawArrays(GL_POINTS, 0, positions.size());
 		glErrorCheck("glDrawArrays");
 	}
+
 	window->update();
 }
 

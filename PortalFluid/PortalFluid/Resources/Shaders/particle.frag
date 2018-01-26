@@ -11,6 +11,8 @@ uniform vec3 uParticles[20];
 uniform int uNumParticles;
 uniform vec2 uViewPortSize;
 uniform int uMode;
+uniform samplerCube uEnvironmentMap;
+uniform mat4 uInverseView;
 
 const float ISO_VALUE = 0.5;
 
@@ -50,6 +52,35 @@ vec3 calculateNormalExp(vec3 position, float epsilon)
 	return -normalize(vec3(nX, nY, nZ));
 }
 
+vec3 envShading(vec3 N, vec3 V)
+{
+	vec3 reflection = texture(uEnvironmentMap, reflect(-V, N)).rgb;
+
+	float refractionRed   = texture(uEnvironmentMap, refract(V,-N, 0.7 - 0.03)).r;
+	float refractionGreen = texture(uEnvironmentMap, refract(V,-N, 0.7)).g;
+	float refractionBlue  = texture(uEnvironmentMap, refract(V,-N, 0.7 + 0.03)).b;
+
+	vec3 refraction = vec3(refractionRed, refractionGreen, refractionBlue);
+
+	float fresnel = pow(1.0 - dot(N, V), 2);
+	fresnel = 1.5 * fresnel + 0.1;
+
+	float NdotV = clamp(dot(N, V), 0.0, 1.0);
+	vec3 color = mix(refraction, reflection, fresnel);
+	return mix(color, texture(uEnvironmentMap, -N).rgb, NdotV);
+}
+
+vec3 blinnPhong(vec3 N, vec3 V)
+{
+	vec3 L = normalize(vec3(1.0));
+	vec3 H = normalize(V+L);
+	float NdotL = clamp(dot(N,L), 0.0, 1.0);
+	float NdotH = clamp(dot(N,H), 0.0, 1.0);
+		
+	float specular = pow(NdotH, 32);
+	return vec3(0.1) + NdotL * vec3(139.0/255.0,69.0/255.0,1.09/255.0) + specular * vec3(1.0);
+}
+
 void main()
 {
 	vec2 texCoord = gl_FragCoord.xy / uViewPortSize;
@@ -64,112 +95,92 @@ void main()
 	}
 	else if (uMode == 2)
 	{
-		float epsilon = 0.001f;
-		vec3 ray = normalize(vCameraPosition) * 0.0001;
+		float epsilon = 0.01f;
+		vec3 ray = normalize(vCameraPosition);
+		vec3 currentPosition = vCameraPosition;
+		vec3 previousPosition = vCameraPosition;
 		bool found = false;
-		vec3 currentPosition;
 		for (int i = 0; i < 10; ++i)
 		{
-			currentPosition = vCameraPosition - i * ray;
-			float value = scalarFieldLinear(currentPosition);
-			if(value >= ISO_VALUE)
+			if(scalarFieldLinear(currentPosition) >= ISO_VALUE)
 			{
 				found = true;
-				float lowerBound = float(i - 1);
-				float upperBound = float(i);
-				float mid = 0.0;
+				vec3 lowerBound = previousPosition;
+				vec3 upperBound = currentPosition;
 				for(int j = 0; j < 10; ++j)
 				{
-					mid = (upperBound - lowerBound) * 0.5;
-					currentPosition = vCameraPosition - mid * ray;
-					value = scalarFieldLinear(currentPosition);
-					float difference = value - ISO_VALUE;
-					if (difference > 0.0)
+					currentPosition = (lowerBound + upperBound) * 0.5;
+					if (scalarFieldLinear(currentPosition) > ISO_VALUE)
 					{
-						upperBound = mid;
-					}
-					else if (difference < 0.0)
-					{
-						lowerBound = mid;
+						upperBound = currentPosition;
 					}
 					else
 					{
-						break;
+						lowerBound = currentPosition;
 					}
 				}
 				
+				currentPosition = (lowerBound + upperBound) * 0.5;
 
 				vec3 N = calculateNormalLinear(currentPosition, epsilon);
-				vec3 L = normalize(vec3(1.0));
-				// compute common factors
-				vec3 H = normalize(-vCameraPosition+L);
-				float NdotL = clamp(dot(N,L), 0.0, 1.0);
-				float NdotH = clamp(dot(N,H), 0.0, 1.0);
-		
-				float specular = pow(NdotH, 32);
-				vec3 color =  vec3(0.1) + NdotL * vec3(0.1, 0.1, 1.0) + specular * vec3(1.0);
+				vec3 V = normalize(-vCameraPosition);
 
-				oFragColor = vec4(color, 1.0);
+				N = (uInverseView * vec4(N, 0.0)).xyz;
+				V = (uInverseView * vec4(V, 0.0)).xyz;
+
+				oFragColor = vec4(envShading(N, V), 1.0);
 			}
+			previousPosition = currentPosition;
+			currentPosition += ray;
 		}
 		if(!found)
 		{
-			oFragColor = vec4(texCoord, 0.0, 0.0);
+			oFragColor = vec4(0.0);
 		}
 	}
 	else
 	{
-		float epsilon = 0.001f;
-		vec3 ray = normalize(vCameraPosition) * 0.01;
+		float epsilon = 0.01f;
+		vec3 ray = normalize(vCameraPosition);
+		vec3 currentPosition = vCameraPosition;
+		vec3 previousPosition = vCameraPosition;
 		bool found = false;
-		vec3 currentPosition;
 		for (int i = 0; i < 10; ++i)
 		{
-			currentPosition = vCameraPosition - i * ray;
-			float value = scalarFieldExp(currentPosition);
-			if(value >= ISO_VALUE)
+			if(scalarFieldExp(currentPosition) >= ISO_VALUE)
 			{
 				found = true;
-				float lowerBound = float(i - 1);
-				float upperBound = float(i);
-				float mid = 0.0;
+				vec3 lowerBound = previousPosition;
+				vec3 upperBound = currentPosition;
 				for(int j = 0; j < 10; ++j)
 				{
-					mid = (upperBound - lowerBound) * 0.5;
-					currentPosition = vCameraPosition - mid * ray;
-					value = scalarFieldExp(currentPosition);
-					float difference = value - ISO_VALUE;
-					if (difference > 0.0)
+					currentPosition = (lowerBound + upperBound) * 0.5;
+					if (scalarFieldExp(currentPosition) > ISO_VALUE)
 					{
-						upperBound = mid;
-					}
-					else if (difference < 0.0)
-					{
-						lowerBound = mid;
+						upperBound = currentPosition;
 					}
 					else
 					{
-						break;
+						lowerBound = currentPosition;
 					}
 				}
 				
+				currentPosition = (lowerBound + upperBound) * 0.5;
 
 				vec3 N = calculateNormalExp(currentPosition, epsilon);
-				vec3 L = normalize(vec3(1.0));
-				// compute common factors
-				vec3 H = normalize(-vCameraPosition+L);
-				float NdotL = clamp(dot(N,L), 0.0, 1.0);
-				float NdotH = clamp(dot(N,H), 0.0, 1.0);
-		
-				float specular = pow(NdotH, 32);
-				vec3 color =  vec3(0.1) + NdotL * vec3(139.0/255.0,69.0/255.0,1.09/255.0) + specular * vec3(1.0);
+				vec3 V = normalize(-vCameraPosition);
 
-				oFragColor = vec4(color, 1.0);
+				N = (uInverseView * vec4(N, 0.0)).xyz;
+				V = (uInverseView * vec4(V, 0.0)).xyz;
+
+				oFragColor = vec4(envShading(N, V), 1.0);
 			}
+			previousPosition = currentPosition;
+			currentPosition += ray;
 		}
 		if(!found)
 		{
-			oFragColor = vec4(texCoord, 0.0, 0.0);
+			oFragColor = vec4(0.0);
 		}
 	}
 	

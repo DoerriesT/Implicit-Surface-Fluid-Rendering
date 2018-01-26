@@ -12,34 +12,34 @@ void main()
 	vec3 viewSpacePos;
 	float scale = 5.0;
 
-    viewSpacePos = pos + vec3(1.0, 1.0, 0.15) * scale;
+    viewSpacePos = pos + vec3(1.0, 1.0, 1.0) * scale;
 	vCameraPosition = viewSpacePos;
     gl_Position = uProjection * vec4(viewSpacePos, 1.0); 
     EmitVertex();
 
-    viewSpacePos = pos + vec3(1.0, -1.0, 0.15) * scale;
+    viewSpacePos = pos + vec3(1.0, -1.0, 1.0) * scale;
 	vCameraPosition = viewSpacePos;
     gl_Position = uProjection * vec4(viewSpacePos, 1.0); 
     EmitVertex();
 	
-    viewSpacePos = pos + vec3(-1.0, 1.0, 0.15) * scale;
+    viewSpacePos = pos + vec3(-1.0, 1.0, 1.0) * scale;
 	vCameraPosition = viewSpacePos;
     gl_Position = uProjection * vec4(viewSpacePos, 1.0); 
     EmitVertex();
     
     EndPrimitive();
 	
-    viewSpacePos = pos + vec3(1.0, -1.0, 0.15) * scale;
+    viewSpacePos = pos + vec3(1.0, -1.0, 1.0) * scale;
 	vCameraPosition = viewSpacePos;
     gl_Position = uProjection * vec4(viewSpacePos, 1.0); 
     EmitVertex();
 
-    viewSpacePos = pos + vec3(-1.0, -1.0, 0.15) * scale;
+    viewSpacePos = pos + vec3(-1.0, -1.0, 1.0) * scale;
 	vCameraPosition = viewSpacePos;
     gl_Position = uProjection * vec4(viewSpacePos, 1.0); 
     EmitVertex();
 	
-    viewSpacePos = pos + vec3(-1.0, 1.0, 0.15) * scale;
+    viewSpacePos = pos + vec3(-1.0, 1.0, 1.0) * scale;
 	vCameraPosition = viewSpacePos;
     gl_Position = uProjection * vec4(viewSpacePos, 1.0); 
     EmitVertex();
