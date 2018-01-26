@@ -20,34 +20,66 @@ bool initializeOpenGL();
 
 typedef std::chrono::duration<double> DoubleDuration;
 
-const size_t MAX_PARTICLES = 10;
+const size_t MAX_PARTICLES = 20;
 std::shared_ptr<Window> window;
-Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::quat());
-ParticleEmitter particleEmitter(MAX_PARTICLES, glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -0.1f, 0.0f), glm::radians(10.0f));
+Camera camera(glm::vec3(0.0f, 50.0f, 50.0f), glm::quat());
+ParticleEmitter particleEmitter(MAX_PARTICLES, glm::vec3(-25.0f, 25.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -3.0f, 0.0f), glm::radians(5.0f), 1.0f);
 GLuint particleVAO;
 GLuint particleVBO;
 GLuint floorVAO;
 GLuint floorVBO;
 GLuint floorEBO;
-std::shared_ptr<ShaderProgram> particleShader;
+std::shared_ptr<ShaderProgram> particlePointsShader;
+std::shared_ptr<ShaderProgram> particleQuadsShader;
 std::shared_ptr<ShaderProgram> floorShader;
-GLint uViewProjection;
-GLint uViewPortSize;
-GLint uModelViewProjection;
+
+// point particle shader uniforms
+GLint uViewProjectionParticlePoints;
+GLint uViewPortSizeParticlePoints;
+GLint uPositionParticlePoints;
+GLint uViewParticlePoints;
+GLint uProjectionParticlePoints;
+GLint uModeParticlePoints;
+
+// quad particle shader uniforms
+GLint uViewProjectionParticleQuads;
+GLint uViewPortSizeParticleQuads;
+GLint uPositionParticleQuads;
+GLint uViewParticleQuads;
+GLint uProjectionParticleQuads;
+GLint uModeParticleQuads;
+
+// floor shader uniform
+GLint uModelViewProjectionFloor;
+
+// mode
+int mode = 1;
 
 
 int main()
 {
-	camera.rotate(glm::vec3(glm::radians(0.0f), 0.0f, 0.0f));
+	camera.rotate(glm::vec3(glm::radians(45.0f), 0.0f, 0.0f));
 	window = Window::createWindow("Portal Fluid", 800, 600, true, 0);
 	window->init();
 	initializeOpenGL();
 
-	particleShader = ShaderProgram::createShaderProgram("Resources/Shaders/particle.vert", "Resources/Shaders/particle.frag");
+	particlePointsShader = ShaderProgram::createShaderProgram("Resources/Shaders/particle.vert", "Resources/Shaders/particle.frag");
+	particleQuadsShader = ShaderProgram::createShaderProgram("Resources/Shaders/particle.vert", "Resources/Shaders/particle.frag", "Resources/Shaders/particle.geom");
 	floorShader = ShaderProgram::createShaderProgram("Resources/Shaders/floor.vert", "Resources/Shaders/floor.frag");
-	uViewProjection = particleShader->createUniform("uViewProjection");
-	uViewPortSize = particleShader->createUniform("uViewPortSize");
-	uModelViewProjection = floorShader->createUniform("uModelViewProjection");
+
+	uViewPortSizeParticlePoints = particlePointsShader->createUniform("uViewPortSize");
+	uPositionParticlePoints = particlePointsShader->createUniform("uPosition");
+	uViewParticlePoints = particlePointsShader->createUniform("uView");
+	uProjectionParticlePoints = particlePointsShader->createUniform("uProjection");
+	uModeParticlePoints = particlePointsShader->createUniform("uMode");
+
+	uViewPortSizeParticleQuads = particleQuadsShader->createUniform("uViewPortSize");
+	uPositionParticleQuads = particleQuadsShader->createUniform("uPosition");
+	uViewParticleQuads = particleQuadsShader->createUniform("uView");
+	uProjectionParticleQuads = particleQuadsShader->createUniform("uProjection");
+	uModeParticleQuads = particleQuadsShader->createUniform("uMode");
+
+	uModelViewProjectionFloor = floorShader->createUniform("uModelViewProjection");
 
 	// particle VAO/VBO
 	{
@@ -59,7 +91,7 @@ int main()
 			glBindVertexArray(particleVAO);
 
 			glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
-			glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 3, NULL, GL_DYNAMIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 3 * 4, NULL, GL_DYNAMIC_DRAW);
 
 			// vertex Positions
 			glEnableVertexAttribArray(0);
@@ -70,29 +102,41 @@ int main()
 	// floor VAO/VBO
 	{
 		{
-			float positions[] =
-			{
-				-1.0f, 0.0f, -1.0f,
-				-1.0f, 0.0f, 1.0f,
-				1.0f, 0.0f, -1.0f,
-				1.0f, 0.0f, -1.0f,
-				-1.0f, 0.0f, 1.0f,
-				1.0f, 0.0f, 1.0f,
+			float vertices[] = {
+				0.5f, 0.0f,  0.5f,  // top right
+				0.5f, 0.0f, -0.5f,  // bottom right
+				-0.5f, 0.0f, -0.5f,  // bottom left
+				-0.5f, 0.0f,  0.5f   // top left 
+			};
+			unsigned int indices[] = {  // note that we start from 0!
+				0, 1, 3,  // first Triangle
+				1, 2, 3   // second Triangle
 			};
 
-			// create buffers/arrays
 			glGenVertexArrays(1, &floorVAO);
 			glGenBuffers(1, &floorVBO);
 			glGenBuffers(1, &floorEBO);
-
+			// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
 			glBindVertexArray(floorVAO);
 
 			glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(positions), &positions, GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-			// vertex Positions
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, floorEBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3, (void*)0);
+
+			// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			// remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
+			//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+			// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+			// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+			glBindVertexArray(0);
 		}
 	}
 
@@ -109,17 +153,19 @@ void gameLoop()
 	static double currentTime;
 	static double lastFrame;
 
-	currentTime = lastFrame = std::chrono::duration_cast<DoubleDuration>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+	currentTime = lastFrame = glfwGetTime();
 
 	while (!window->shouldClose())
 	{
 		glErrorCheck("loop begin");
-		currentTime = std::chrono::duration_cast<DoubleDuration>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+		currentTime = glfwGetTime();
 		double delta = currentTime - lastFrame;
 
 		input(delta);
-		update(delta, currentTime);
+		update(currentTime, delta);
 		render();
+
+		lastFrame = currentTime;
 	}
 }
 
@@ -136,27 +182,40 @@ void input(const double &_deltaTime)
 	bool pressed = false;
 	if (window->isKeyPressed(GLFW_KEY_W))
 	{
-		cameraTranslation.z = -0.1f * _deltaTime;
+		cameraTranslation.z = -10.0f * _deltaTime;
 		pressed = true;
 	}
 	if (window->isKeyPressed(GLFW_KEY_S))
 	{
-		cameraTranslation.z = 0.1f * _deltaTime;
+		cameraTranslation.z = 10.0f * _deltaTime;
 		pressed = true;
 	}
 	if (window->isKeyPressed(GLFW_KEY_A))
 	{
-		cameraTranslation.x = -0.1f * _deltaTime;
+		cameraTranslation.x = -10.0f * _deltaTime;
 		pressed = true;
 	}
 	if (window->isKeyPressed(GLFW_KEY_D))
 	{
-		cameraTranslation.x = 0.1f * _deltaTime;
+		cameraTranslation.x = 10.0f * _deltaTime;
 		pressed = true;
 	}
 	if (pressed)
 	{
 		camera.translate(cameraTranslation);
+	}
+
+	if (window->isKeyPressed(GLFW_KEY_1))
+	{
+		mode = 0;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_2))
+	{
+		mode = 1;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_3))
+	{
+		mode = 2;
 	}
 }
 
@@ -174,25 +233,60 @@ void render()
 	glEnableVertexAttribArray(0);
 
 	floorShader->bind();
-	floorShader->setUniform(uModelViewProjection, window->getProjectionMatrix() * camera.getViewMatrix() * glm::scale(glm::vec3(100.0f)));
+	floorShader->setUniform(uModelViewProjectionFloor, window->getProjectionMatrix() * camera.getViewMatrix() * glm::scale(glm::vec3(50.0f)));
 
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	
 	// render particles
-	std::vector<Particle> &particles = particleEmitter.getParticles();
+	std::vector<Particle *> &particles = particleEmitter.getParticles();
 	if (!particles.empty())
 	{
+		/*std::vector<glm::vec3> positions;
+		for (Particle *particle : particles)
+		{
+			positions.push_back(particle->position);
+		}
+
 		glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, particles.size() * 3, &particles[0]);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(glm::vec3), &positions[0]);
+		glErrorCheck("glBufferSubData");*/
 
 		glBindVertexArray(particleVAO);
 		glEnableVertexAttribArray(0);
 
-		particleShader->bind();
-		particleShader->setUniform(uViewProjection, window->getProjectionMatrix() * camera.getViewMatrix());
-		particleShader->setUniform(uViewPortSize, glm::vec2(window->getWidth(), window->getHeight()));
+		if (mode == 0)
+		{
+			particlePointsShader->bind();
+			particlePointsShader->setUniform(uViewPortSizeParticlePoints, glm::vec2(window->getWidth(), window->getHeight()));
+			particlePointsShader->setUniform(uModeParticlePoints, 0);
+			particlePointsShader->setUniform(uViewParticlePoints, camera.getViewMatrix());
+			particlePointsShader->setUniform(uProjectionParticlePoints, window->getProjectionMatrix());
+			for (Particle *particle : particleEmitter.getParticles())
+			{
+				particlePointsShader->setUniform(uPositionParticlePoints, glm::vec4(particle->position, 1.0));
 
-		glDrawArrays(GL_POINTS, 0, particles.size());
+				glDrawArrays(GL_POINTS, 0, 1);
+				glErrorCheck("glDrawArrays");
+			}
+		}
+		else
+		{
+			particleQuadsShader->bind();
+			particleQuadsShader->setUniform(uViewPortSizeParticleQuads, glm::vec2(window->getWidth(), window->getHeight()));
+			particleQuadsShader->setUniform(uModeParticleQuads, mode);
+			particleQuadsShader->setUniform(uViewParticleQuads, camera.getViewMatrix());
+			particleQuadsShader->setUniform(uProjectionParticleQuads, window->getProjectionMatrix());
+			for (Particle *particle : particleEmitter.getParticles())
+			{
+				particleQuadsShader->setUniform(uPositionParticleQuads, glm::vec4(particle->position, 1.0));
+
+				glDrawArrays(GL_POINTS, 0, 1);
+				glErrorCheck("glDrawArrays");
+			}
+		}
+		
+		//glDrawArrays(GL_POINTS, 0, positions.size());
+		glErrorCheck("glDrawArrays");
 	}
 	window->update();
 }
