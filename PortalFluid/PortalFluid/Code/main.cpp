@@ -48,6 +48,8 @@ GLint uPositionParticleQuads;
 GLint uViewParticleQuads;
 GLint uProjectionParticleQuads;
 GLint uModeParticleQuads;
+GLint uParticles[20];
+GLint uNumParticles;
 
 // floor shader uniform
 GLint uModelViewProjectionFloor;
@@ -78,6 +80,11 @@ int main()
 	uViewParticleQuads = particleQuadsShader->createUniform("uView");
 	uProjectionParticleQuads = particleQuadsShader->createUniform("uProjection");
 	uModeParticleQuads = particleQuadsShader->createUniform("uMode");
+	for (size_t i = 0; i < 20; ++i)
+	{
+		uParticles[i] = particleQuadsShader->createUniform("uParticles[" + std::to_string(i)+ "]");
+	}
+	uNumParticles = particleQuadsShader->createUniform("uNumParticles");
 
 	uModelViewProjectionFloor = floorShader->createUniform("uModelViewProjection");
 
@@ -217,6 +224,10 @@ void input(const double &_deltaTime)
 	{
 		mode = 2;
 	}
+	else if (window->isKeyPressed(GLFW_KEY_4))
+	{
+		mode = 4;
+	}
 }
 
 void update(const double &_currentTime, const double &_deltaTime)
@@ -276,6 +287,16 @@ void render()
 			particleQuadsShader->setUniform(uModeParticleQuads, mode);
 			particleQuadsShader->setUniform(uViewParticleQuads, camera.getViewMatrix());
 			particleQuadsShader->setUniform(uProjectionParticleQuads, window->getProjectionMatrix());
+			particleQuadsShader->setUniform(uNumParticles, (int)particles.size());
+
+			std::vector<Particle *> &particles = particleEmitter.getParticles();
+			for (size_t i = 0; i < particles.size(); ++i)
+			{
+				particleQuadsShader->setUniform(uParticles[i], glm::vec3(camera.getViewMatrix() * glm::vec4(particles[i]->position, 1.0)));
+				glErrorCheck("setUniform");
+			}
+			
+
 			for (Particle *particle : particleEmitter.getParticles())
 			{
 				particleQuadsShader->setUniform(uPositionParticleQuads, glm::vec4(particle->position, 1.0));
@@ -313,8 +334,8 @@ bool initializeOpenGL()
 
 	//glEnable(GL_MULTISAMPLE);
 
-	glDisable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glClearColor(0.0f, 0.2f, 0.5f, 1.0f);
 
