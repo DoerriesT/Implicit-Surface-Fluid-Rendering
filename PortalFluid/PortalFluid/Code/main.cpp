@@ -68,7 +68,7 @@ int mode = 3;
 int main()
 {
 	camera.rotate(glm::vec3(glm::radians(45.0f), 0.0f, 0.0f));
-	window = Window::createWindow("Portal Fluid", 1280, 720, true, 0);
+	window = Window::createWindow("Portal Fluid", 1280, 720, false, 0);
 	window->init();
 	initializeOpenGL();
 
