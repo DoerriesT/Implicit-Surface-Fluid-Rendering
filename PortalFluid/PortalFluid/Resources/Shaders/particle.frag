@@ -13,6 +13,7 @@ uniform vec2 uViewPortSize;
 uniform int uMode;
 uniform samplerCube uEnvironmentMap;
 uniform mat4 uInverseView;
+uniform int uSubstanceMode;
 
 const float ISO_VALUE = 0.5;
 
@@ -56,18 +57,55 @@ vec3 envShading(vec3 N, vec3 V)
 {
 	vec3 reflection = texture(uEnvironmentMap, reflect(-V, N)).rgb;
 
-	float refractionRed   = texture(uEnvironmentMap, refract(V,-N, 0.7 - 0.03)).r;
-	float refractionGreen = texture(uEnvironmentMap, refract(V,-N, 0.7)).g;
-	float refractionBlue  = texture(uEnvironmentMap, refract(V,-N, 0.7 + 0.03)).b;
+	vec3 refraction = vec3(0.0);
 
-	vec3 refraction = vec3(refractionRed, refractionGreen, refractionBlue);
+	switch (uSubstanceMode)
+	{
+		case 0:
+		{
+			// water
+			float etaAirWater = 1.0003 / 1.3333;
+			refraction = texture(uEnvironmentMap, refract(-V,N, etaAirWater)).rgb;
+			break;
+		}
+		case 1:
+		{
+			// glass
+			float etaAirGlass = 1.0003 / 1.5;
+			refraction = vec3(texture(uEnvironmentMap, refract(-V,N, etaAirGlass - 0.03)).r, 
+							texture(uEnvironmentMap, refract(-V,N, etaAirGlass)).g, 
+							texture(uEnvironmentMap, refract(-V,N, etaAirGlass + 0.03)).b);
+			break;
+		}
+		case 2:
+		{
+			// air
+			float etaAirAir = 1.0;
+			refraction = texture(uEnvironmentMap, refract(-V,N, etaAirAir)).rgb;
+			break;
+		}
+		case 3:
+		{
+			// air diffraction
+			float etaAirAir = 1.0;
+			refraction = vec3(texture(uEnvironmentMap, refract(-V,N, etaAirAir - 0.03)).r, 
+							texture(uEnvironmentMap, refract(-V,N, etaAirAir)).g, 
+							texture(uEnvironmentMap, refract(-V,N, etaAirAir + 0.03)).b);
+			break;
+		}
+	}
 
 	float fresnel = pow(1.0 - dot(N, V), 2);
 	fresnel = 1.5 * fresnel + 0.1;
-
-	float NdotV = clamp(dot(N, V), 0.0, 1.0);
+	
 	vec3 color = mix(refraction, reflection, fresnel);
-	return mix(color, texture(uEnvironmentMap, -N).rgb, NdotV);
+
+	vec3 L = normalize(vec3(1.0, 1.0, 0.0));
+	vec3 H = normalize(V+L);
+	float NdotH = clamp(dot(N,H), 0.0, 1.0);
+		
+	float specular = pow(NdotH, 128);
+	return color + specular * vec3(0.7);
 }
 
 vec3 blinnPhong(vec3 N, vec3 V)

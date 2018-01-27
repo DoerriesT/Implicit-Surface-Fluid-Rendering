@@ -49,10 +49,11 @@ GLint uPositionQuads;
 GLint uViewQuads;
 GLint uProjectionQuads;
 GLint uModeQuads;
-GLint uParticlesQuads[20];
+GLint uParticlesQuads[MAX_PARTICLES];
 GLint uNumParticlesQuads;
 GLint uEnvironmentMapQuads;
 GLint uInverseViewQuads;
+GLint uSubstanceModeQuads;
 
 // floor shader uniform
 GLint uModelViewProjectionFloor;
@@ -63,6 +64,7 @@ GLint uEnvironmentMapSkybox;
 
 // mode
 int mode = 3;
+int substanceMode = 0;
 
 
 int main()
@@ -90,13 +92,14 @@ int main()
 	uViewQuads = particleQuadsShader->createUniform("uView");
 	uProjectionQuads = particleQuadsShader->createUniform("uProjection");
 	uModeQuads = particleQuadsShader->createUniform("uMode");
-	for (size_t i = 0; i < 20; ++i)
+	for (size_t i = 0; i < MAX_PARTICLES; ++i)
 	{
 		uParticlesQuads[i] = particleQuadsShader->createUniform("uParticles[" + std::to_string(i)+ "]");
 	}
 	uNumParticlesQuads = particleQuadsShader->createUniform("uNumParticles");
 	uEnvironmentMapQuads = particleQuadsShader->createUniform("uEnvironmentMap");
 	uInverseViewQuads = particleQuadsShader->createUniform("uInverseView");
+	uSubstanceModeQuads = particleQuadsShader->createUniform("uSubstanceMode");
 
 	// floor
 	uModelViewProjectionFloor = floorShader->createUniform("uModelViewProjection");
@@ -255,6 +258,23 @@ void input(const double &_deltaTime)
 	{
 		mode = 4;
 	}
+
+	if (window->isKeyPressed(GLFW_KEY_F1))
+	{
+		substanceMode = 0;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_F2))
+	{
+		substanceMode = 1;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_F3))
+	{
+		substanceMode = 2;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_F4))
+	{
+		substanceMode = 3;
+	}
 }
 
 void update(const double &_currentTime, const double &_deltaTime)
@@ -319,6 +339,7 @@ void render()
 			particleQuadsShader->setUniform(uViewQuads, camera.getViewMatrix());
 			particleQuadsShader->setUniform(uProjectionQuads, window->getProjectionMatrix());
 			particleQuadsShader->setUniform(uNumParticlesQuads, (int)particles.size());
+			particleQuadsShader->setUniform(uSubstanceModeQuads, substanceMode);
 
 			glm::mat4 viewMatrix = camera.getViewMatrix();
 
