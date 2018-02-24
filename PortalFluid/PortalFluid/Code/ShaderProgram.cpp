@@ -30,7 +30,7 @@ ShaderProgram::ShaderProgram(const char *_vertexShaderPath, const char *_fragmen
 	if (!success)
 	{
 		glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << _vertexShaderPath << "\n" << infoLog << std::endl;
+		std::cout << "Vertex Shader Compilation Failed!\n" << _vertexShaderPath << "\n" << infoLog << std::endl;
 		assert(false);
 	};
 
@@ -43,7 +43,7 @@ ShaderProgram::ShaderProgram(const char *_vertexShaderPath, const char *_fragmen
 	if (!success)
 	{
 		glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << _fragmentShaderPath << "\n" << infoLog << std::endl;
+		std::cout << "Fragment Shader Compilation Failed!\n" << _fragmentShaderPath << "\n" << infoLog << std::endl;
 		assert(false);
 	};
 
@@ -58,7 +58,7 @@ ShaderProgram::ShaderProgram(const char *_vertexShaderPath, const char *_fragmen
 		if (!success)
 		{
 			glGetShaderInfoLog(geometry, 512, NULL, infoLog);
-			std::cout << "ERROR::SHADER::GEOMETRY::COMPILATION_FAILED\n" << _geometryShaderPath << "\n" << infoLog << std::endl;
+			std::cout << "Geometry Shader Compilation Failed!\n" << _geometryShaderPath << "\n" << infoLog << std::endl;
 			assert(false);
 		};
 	}
@@ -78,10 +78,10 @@ ShaderProgram::ShaderProgram(const char *_vertexShaderPath, const char *_fragmen
 	if (!success)
 	{
 		glGetProgramInfoLog(programId, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+		std::cout << "Shader Program Linking Failed!\n" << infoLog << std::endl;
 	}
 
-	// delete the shaders as they're linked into our program now and no longer necessery
+	// detach and delete the shaders as they're linked into our program now and are no longer necessery
 	glDetachShader(programId, vertex);
 	glDetachShader(programId, fragment);
 	if (_geometryShaderPath)
@@ -98,7 +98,7 @@ ShaderProgram::ShaderProgram(const char *_vertexShaderPath, const char *_fragmen
 	if (!success)
 	{
 		glGetProgramInfoLog(programId, 512, NULL, infoLog);
-		std::cout << "WARNING::SHADER::PROGRAM::VALIDATION_FAILED\n" << infoLog << std::endl;
+		std::cout << "Shader Program Validation Failed!\n" << infoLog << std::endl;
 	}
 
 	delete[] vertexShaderCode;

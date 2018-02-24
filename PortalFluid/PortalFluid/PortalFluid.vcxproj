@@ -152,8 +152,6 @@
     <ClInclude Include="Code\Window.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\floor.frag" />
-    <None Include="Resources\Shaders\floor.vert" />
     <None Include="Resources\Shaders\particle.frag" />
     <None Include="Resources\Shaders\particle.geom" />
     <None Include="Resources\Shaders\particle.vert" />

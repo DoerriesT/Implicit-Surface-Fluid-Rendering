@@ -35,7 +35,7 @@ void Window::init()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	window = glfwCreateWindow(resolution.first, resolution.second, title.c_str(), NULL, NULL);
 	if (window == nullptr)
@@ -46,15 +46,7 @@ void Window::init()
 	}
 	glfwMakeContextCurrent(window);
 
-	if (vsync)
-	{
-		// Enable v-sync
-		glfwSwapInterval(1);
-	}
-	else
-	{
-		glfwSwapInterval(0);
-	}
+	glfwSwapInterval(static_cast<int>(vsync));
 
 	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -79,14 +71,6 @@ void Window::update()
 {
 	glfwSwapBuffers(window);
 	glfwPollEvents();
-
-	/*if (glfwGetTime() - lastTime > 5)
-	{
-	lastTime = glfwGetTime();
-	++mode;
-	mode %= 3;
-	setWindowMode((WindowMode)mode);
-	}*/
 }
 
 unsigned int Window::getWidth() const
@@ -162,15 +146,11 @@ Window::Window(const std::string &_title, const unsigned int &_width, const unsi
 
 // callback functions
 
-void windowSizeCallback(GLFWwindow *window, int width, int height)
+void windowSizeCallback(GLFWwindow *_window, int _width, int _height)
 {
-	// we invoke our own resize callbacks and do not propagate those invoked by glfw
-
-	/*WindowFramework *windowFramework = static_cast<WindowFramework *>(glfwGetWindowUserPointer(window));
-	for (IWindowResizeListener *listener : windowFramework->resizeListeners)
-	{
-	listener->onResize(width, height);
-	}*/
+	Window *window = static_cast<Window *>(glfwGetWindowUserPointer(_window));
+	window->resolution.first = _width;
+	window->resolution.second = _height;
 }
 
 void curserPosCallback(GLFWwindow *_window, double _xPos, double _yPos)

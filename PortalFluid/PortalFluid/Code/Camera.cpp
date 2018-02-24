@@ -25,7 +25,8 @@ void Camera::setPosition(const glm::vec3 &_position)
 
 void Camera::rotate(const glm::vec3 &_pitchYawRoll)
 {
-	glm::quat tmp = glm::quat(glm::vec3(_pitchYawRoll.x, 0.0, 0.0));
+	glm::quat tmp = glm::quat(glm::vec3(_pitchYawRoll.x, 0.0, _pitchYawRoll.z));
+	// we always rotate yaw around the world space up axis
 	glm::quat tmp1 = glm::quat(glm::angleAxis(_pitchYawRoll.y, glm::vec3(0.0, 1.0, 0.0)));
 	rotation = glm::normalize(tmp * rotation * tmp1);
 
@@ -34,16 +35,15 @@ void Camera::rotate(const glm::vec3 &_pitchYawRoll)
 
 void Camera::translate(const glm::vec3 &_translation)
 {
+	// extract forward and strafe directions from view matrix
 	glm::vec3 forward(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 	glm::vec3 strafe(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 
-	static const float speed = 1.12f;
-
-	position += (_translation.z * forward + _translation.x * strafe) * speed;
+	position += (_translation.z * forward + _translation.x * strafe);
 	needToUpdateViewMatrix = true;
 }
 
-const glm::mat4 &Camera::getViewMatrix()
+const glm::mat4 &Camera::getViewMatrix() const
 {
 	if (needToUpdateViewMatrix)
 	{
@@ -63,19 +63,19 @@ const glm::quat & Camera::getRotation() const
 	return rotation;
 }
 
-glm::vec3 Camera::getForwardDirection()
+glm::vec3 Camera::getForwardDirection() const
 {
 	glm::vec3 dir(glm::normalize(getViewMatrix()[2]));
 	dir.z = -dir.z;
 	return dir;
 }
 
-glm::vec3 Camera::getUpDirection()
+glm::vec3 Camera::getUpDirection() const
 {
 	return glm::normalize(getViewMatrix()[1]);;
 }
 
-void Camera::updateViewMatrix()
+void Camera::updateViewMatrix() const
 {
 	glm::mat4 translate;
 	viewMatrix = glm::mat4_cast(rotation) * glm::translate(translate, -position);

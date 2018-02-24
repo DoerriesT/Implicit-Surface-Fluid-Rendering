@@ -64,12 +64,6 @@
     <None Include="Resources\Shaders\particle.vert">
       <Filter>Resources\Shaders</Filter>
     </None>
-    <None Include="Resources\Shaders\floor.frag">
-      <Filter>Resources\Shaders</Filter>
-    </None>
-    <None Include="Resources\Shaders\floor.vert">
-      <Filter>Resources\Shaders</Filter>
-    </None>
     <None Include="Resources\Shaders\particle.geom">
       <Filter>Resources\Shaders</Filter>
     </None>

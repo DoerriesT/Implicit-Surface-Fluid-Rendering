@@ -1,6 +1,5 @@
 #include "Texture.h"
 #include <algorithm>
-#include <iostream>
 #include <cassert>
 #include <gli\texture.hpp>
 #include <gli\load.hpp>
@@ -12,9 +11,6 @@ std::shared_ptr<Texture> Texture::createTexture(const std::string &_filename)
 
 Texture::Texture(const std::string &_filename)
 {
-#ifdef _DEBUG
-	std::cout << _filename << std::endl;
-#endif
 	initOpenGL(_filename);
 }
 
@@ -37,16 +33,21 @@ const GLenum &Texture::getType() const
 
 void Texture::initOpenGL(const std::string &_filename)
 {
+	// load the texture from the given filepath
 	gli::texture texture(gli::load(_filename));
+	// assert that the texture actually contains data
 	assert(!texture.empty());
 
+	// translate gli texture format to OpenGL texture format
 	gli::gl glTranslator(gli::gl::PROFILE_GL33);
 	gli::gl::format const format = glTranslator.translate(texture.format(), texture.swizzles());
 
+	// translate gli texture typ to OpenGL texture type
 	GLenum textureType = glTranslator.translate(texture.target());
 	type = textureType;
 	id = 0;
 
+	// generate texture handle
 	glGenTextures(1, &id);
 	glBindTexture(textureType, id);
 	// Base and max level are not supported by OpenGL ES 2.0
@@ -63,6 +64,7 @@ void Texture::initOpenGL(const std::string &_filename)
 	glm::tvec3<GLsizei> const extent(texture.extent());
 	GLsizei const totalFaces = static_cast<GLsizei>(texture.layers() * texture.faces());
 
+	// upload texture data to OpenGL
 	for (std::size_t layer = 0; layer < texture.layers(); ++layer)
 	{
 		for (std::size_t level = 0; level < texture.levels(); ++level)
