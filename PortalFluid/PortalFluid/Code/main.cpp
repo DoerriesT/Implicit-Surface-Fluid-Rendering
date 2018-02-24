@@ -21,6 +21,11 @@ enum class SubstanceMode
 	WATER, GLASS, AIR_BUBBLES, SOAP_BUBBLES
 };
 
+enum class SimulationSpeed
+{
+	FREEZE, SLOW, NORMAL, FAST
+};
+
 void glErrorCheck(const std::string &_message);
 void gameLoop();
 void input(const double &_deltaTime);
@@ -73,6 +78,7 @@ GLint uEnvironmentMapSkybox;
 // modes
 RenderMode mode = RenderMode::EXPONENTIAL;
 SubstanceMode substanceMode = SubstanceMode::WATER;
+SimulationSpeed simSpeed = SimulationSpeed::NORMAL;
 
 
 int main()
@@ -185,6 +191,24 @@ void input(const double &_deltaTime)
 	{
 		substanceMode = SubstanceMode::SOAP_BUBBLES;
 	}
+
+	// set simulation speed
+	if (window->isKeyPressed(GLFW_KEY_F))
+	{
+		simSpeed = SimulationSpeed::NORMAL;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_G))
+	{
+		simSpeed = SimulationSpeed::SLOW;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_H))
+	{
+		simSpeed = SimulationSpeed::FAST;
+	}
+	else if (window->isKeyPressed(GLFW_KEY_J))
+	{
+		simSpeed = SimulationSpeed::FREEZE;
+	}
 }
 
 /*
@@ -192,7 +216,33 @@ void input(const double &_deltaTime)
  */
 void update(const double &_currentTime, const double &_deltaTime)
 {
-	particleEmitter.update(_currentTime, _deltaTime);
+	double delta = _deltaTime;
+	switch (simSpeed)
+	{
+	case SimulationSpeed::NORMAL:
+	{
+		break;
+	}
+	case SimulationSpeed::FAST:
+	{
+		delta *= 2.0;
+		break;
+	}
+	case SimulationSpeed::SLOW:
+	{
+		delta *= 0.5;
+		break;
+	}
+	case SimulationSpeed::FREEZE:
+	{
+		delta *= 0.0;
+		break;
+	}
+	default:
+		assert(false);
+		break;
+	}
+	particleEmitter.update(_currentTime, delta);
 }
 
 /*

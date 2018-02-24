@@ -45,8 +45,8 @@ void ParticleEmitter::update(const double &_currentTime, const double &_deltaTim
 		}
 	}
 
-	// if sufficient time has passed since the last emitted particle and we are not at the maximum particle cap, emit a new particle
-	if ((_currentTime - lastEmittedParticleTime >= particleEmittanceDistribution(randomEngine)) && particles.size() < maxParticles)
+	// if sufficient time has passed since the last emitted particle and we are not at the maximum particle cap (and the simulation is not frozen), emit a new particle
+	if ((_currentTime - lastEmittedParticleTime >= particleEmittanceDistribution(randomEngine)) && particles.size() < maxParticles && _deltaTime != 0.0)
 	{
 		particles.push_back(generateParticle());
 		lastEmittedParticleTime = _currentTime;
