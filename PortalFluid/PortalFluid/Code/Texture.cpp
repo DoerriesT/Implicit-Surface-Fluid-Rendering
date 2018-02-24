@@ -14,7 +14,6 @@ Texture::Texture(const std::string &_filename)
 	initOpenGL(_filename);
 }
 
-
 Texture::~Texture()
 {
 	glDeleteTextures(1, &id);
@@ -29,7 +28,6 @@ const GLenum &Texture::getType() const
 {
 	return type;
 }
-
 
 void Texture::initOpenGL(const std::string &_filename)
 {
